@@ -1,0 +1,10 @@
+#!/bin/bash
+
+time=300 #5 min
+
+while(true); do
+    if [[ ufw status | grep -c -e "inactive" -ne 0 ]]; then
+        ufw enable;
+    fi
+    /bin/sleep $time
+done
