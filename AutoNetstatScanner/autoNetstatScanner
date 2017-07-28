@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function warnUser()
+{
+    amarok badnoise.mp4 #test this, but it should play sound
+}
+
+export -f warnUser
+time=300 #5 minutes
+
+while (true); do
+     for i in $(netstat -ntlup); do 
+	if [[ $(echo $i | grep -c -e "/") -ne 0  ]]; then
+            #PID=$(ps -ef | pgrep $( echo $i  | cut -f2 -d'/'));
+            for PID in $(ps -ef | pgrep $( echo $i  | cut -f2 -d'/')); do 
+                PNME=$(ps -ef | pgrep --list-name $( echo $i  | cut -f2 -d'/') | grep $PID | cut -f2 -d' ');
+                realPath=$(ls -la /proc/$PID/exe | cut -f2 -d'>' | cut -f2 -d' '); # can also do pgrep -a and ignore the PID in front.
+                #if [[ $PNME -eq $( echo $realPath | rev | cut -f1 -d'/' ) ]]; then # attempts to read final part by reversing the string and grabbing the last thing
+                if [[ $PNME -ne $( echo $realPath | awk -F/ '{print $NF}'  ) ]]; then #uses awk to get the last thing. May be more reliable.
+                #If the name that is put up with the process name is not the same as the name of the executable that started it; then
+                    if [[ $( cat authorizedExceptions | grep -ic -e $( echo $realPath | awk -F/ '{print $NF}'  ) ) -eq 0 ]]; then
+                    #add in code to check if it should be allowed to access stuff or not.
+                    #Will check for the name of the path the executable is running from, not name (in case they change name to postfix or something like that)
+                        warnUser
+                        echo "$(date):The executable $realPath is masquerading as $PNME. The user as been attempted to be notified and messages will continue to appear." >> autoWarnings.log
+                        zenity --info --text="rogue process $realPath is going as $PNME"
+                        
+                    fi
+                fi
+            done
+	fi
+    done
+    /bin/sleep $time
+done
